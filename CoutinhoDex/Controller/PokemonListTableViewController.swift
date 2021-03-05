@@ -7,24 +7,17 @@
 
 import Foundation
 import UIKit
-import Alamofire
-import AlamofireImage
 
 class PokemonListTableViewController: UITableViewController {
     
-    private let api: PokeAPI = API()
-    private var pokemonList: [PokemonListItem] = []
+    private var currentPage: Int = 0
+    private let limit: Int = 15
+    
+    let api: PokeAPI = API()
+    var pokemonList: [PokemonListItem] = []
     
     override func viewDidLoad() {
-        api.getPokemonList(limit: 10, offset: 0) { data in
-            guard let data = data else { return }
-            let decoder = JSONDecoder()
-            guard let response = try? decoder.decode(PokemonList.self, from: data) else {
-                return
-            }
-            self.pokemonList = response.results
-            self.tableView.reloadData()
-        }
+        loadData()
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -33,7 +26,7 @@ class PokemonListTableViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let pokemonListItem = pokemonList[indexPath.row]
-        let pokemonId = pokemonListItem.url.split(separator: "/").last?.base ?? ""
+        let pokemonId = pokemonListItem.url.split(separator: "/").last ?? ""
         
         let genericCell = tableView.dequeueReusableCell(withIdentifier: PokemonTableViewCell.identifier, for: indexPath)
         
@@ -42,12 +35,31 @@ class PokemonListTableViewController: UITableViewController {
         }
         
         cell.startSkeleton()
-        cell.pokemonId = pokemonId
+        cell.pokemonId = String(pokemonId)
         cell.delegate = self
         
         return cell
     }
     
-}
+    override func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        let nextpage = pokemonList.count - 3
+        if indexPath.row == nextpage {
+            loadData()
+        }
+    }
 
-extension PokemonListTableViewController
+    private func loadData() {
+        let offset = currentPage * limit
+        api.getPokemonList(limit: limit, offset: offset) { data in
+            guard let data = data else { return }
+            let decoder = JSONDecoder()
+            guard let response = try? decoder.decode(PokemonList.self, from: data) else {
+                return
+            }
+            self.pokemonList.append(contentsOf: response.results)
+            self.currentPage += 1
+            self.tableView.reloadData()
+        }
+    }
+    
+}

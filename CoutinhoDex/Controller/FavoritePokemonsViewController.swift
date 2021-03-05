@@ -8,18 +8,7 @@
 import Foundation
 import UIKit
 
-class FavoritePokemonsViewController: UIViewController {
+class FavoritePokemonsViewController: UITableViewController {
     
-    let mainView = FavoritePokemonsView()
     let api: PokeAPI = API()
-    
-    init() {
-        super.init(nibName: nil, bundle: nil)
-        self.tabBarItem = mainView.favoritePokemonsTabBarItem
-        self.view = mainView
-    }
-    
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
 }

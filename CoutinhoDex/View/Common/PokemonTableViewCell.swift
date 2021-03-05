@@ -7,113 +7,76 @@
 
 import Foundation
 import UIKit
+import SkeletonView
+
+import Alamofire
+import AlamofireImage
+
+protocol PokemonTableViewCellDelegate {
+    func fetchPokemonInfo(by id: Int,
+                          completionHandler: @escaping (_ name: String?,
+                                                        _ types: [String]?) -> Void)
+    func fetchPokemonImage(by id: Int,
+                           completionHandler: @escaping (_ image: UIImage?) -> Void)
+}
 
 class PokemonTableViewCell: UITableViewCell {
     
-    static let identifier = "PokemonCell"
+    @IBOutlet weak var pokemonImageView: UIImageView!
+    @IBOutlet weak var numberLabel: UILabel!
+    @IBOutlet weak var nameLabel: UILabel!
+    @IBOutlet weak var typesLabel: UILabel!
     
-    // MARK: Atributos
+    static let identifier = "PokemonListCell"
     
-    weak var requestedImage: UIImage? {
-        didSet {
-            self.pokemonImageView.image = requestedImage // ?? defaultImage
+    var pokemonId: String?
+    var delegate: PokemonTableViewCellDelegate?
+    
+    override func updateConfiguration(using state: UICellConfigurationState) {
+        super.updateConfiguration(using: state)
+        guard pokemonId != nil,
+              !(pokemonId!.isEmpty),
+              let intId = Int(pokemonId!) else {
+            super.removeFromSuperview()
+            return
         }
-    }
-    
-    var pokemonNumber: Int? {
-        didSet {
-            self.pokemonNumberLabel.text = pokemonNumber != nil ? String(pokemonNumber!) : "-"
-        }
-    }
-    
-    var pokemonName: String? {
-        didSet {
-            self.pokemonNameLabel.text = pokemonName != nil ? pokemonName! : "-"
-        }
-    }
-    
-    var pokemonType: [String]? {
-        didSet {
-            self.pokemonTypeLabel.text = pokemonType != nil ? pokemonType!.joined(separator: "/") : "-"
-        }
-    }
-    
-    // MARK: View
-    
-    private lazy var mainStackView: UIStackView = {
-        let view = UIStackView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.axis = .horizontal
-        return view
-    }()
-    
-    private lazy var pokemonImageView: UIImageView = {
-        let view = UIImageView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        return view
-    }()
+        
+        setPokemonIdLabel(intId)
 
-    private lazy var infoStackView: UIStackView = {
-        let view = UIStackView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.axis = .vertical
-        view.distribution = .equalSpacing
-        view.alignment = .top
-        return view
-    }()
-    
-    private lazy var pokemonNumberLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        if let desc = label.font.fontDescriptor.withSymbolicTraits(.traitBold) {
-            label.font = UIFont(descriptor: desc, size: 0.0)
+        self.delegate?.fetchPokemonInfo(by: intId) { [self] (name, types) in
+            setNameLabel(name)
+            setTypesLabel(types)
         }
-        return label
-    }()
-    
-    private lazy var pokemonNameLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
-    private lazy var pokemonTypeLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
-    // MARK: Inits
-    
-    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
-        super.init(style: style, reuseIdentifier: reuseIdentifier)
-        setupView()
+        
+        self.delegate?.fetchPokemonImage(by: intId) { requestedImage in
+            self.pokemonImageView.image = requestedImage // ?? defaultImage
+            self.pokemonImageView.hideSkeleton()
+        }
     }
     
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+    func startSkeleton() {
+        pokemonImageView.showAnimatedGradientSkeleton()
+        numberLabel.showAnimatedGradientSkeleton()
+        nameLabel.showAnimatedGradientSkeleton()
+        typesLabel.showAnimatedGradientSkeleton()
     }
     
-    // MARK: Metodos
+    private func setPokemonIdLabel(_ id: Int) {
+        let idPadded = String(format: "%03d", id)
+        self.numberLabel.text = "#\(idPadded)"
+        self.numberLabel.hideSkeleton()
+    }
     
-    func setupView() {
-        self.translatesAutoresizingMaskIntoConstraints = false
-        
-        infoStackView.addArrangedSubview(pokemonNumberLabel)
-        infoStackView.addArrangedSubview(pokemonNameLabel)
-        infoStackView.addArrangedSubview(pokemonTypeLabel)
-        
-        mainStackView.addArrangedSubview(pokemonImageView)
-        mainStackView.addArrangedSubview(infoStackView)
-        
-        self.addSubview(mainStackView)
-        
-        NSLayoutConstraint.activate([
-            mainStackView.leadingAnchor.constraint(equalToSystemSpacingAfter: self.leadingAnchor, multiplier: 1),
-            mainStackView.trailingAnchor.constraint(equalToSystemSpacingAfter: self.trailingAnchor, multiplier: 1),
-            mainStackView.topAnchor.constraint(equalToSystemSpacingBelow: self.topAnchor, multiplier: 0.5),
-            mainStackView.bottomAnchor.constraint(equalToSystemSpacingBelow: self.bottomAnchor, multiplier: 0.5)
-        ])
-        
+    private func setNameLabel(_ name: String?) {
+        let name = name != nil ? name! : "-"
+        self.nameLabel.text = name.capitalized
+        self.nameLabel.hideSkeleton()
+    }
+    
+    private func setTypesLabel(_ types: [String]?) {
+        let typesCap = types?.map({ $0.capitalized })
+        let typesJoined = types != nil ? typesCap!.joined(separator: "/") : "-"
+        self.typesLabel.text = typesJoined
+        self.typesLabel.hideSkeleton()
     }
 }
